@@ -3,9 +3,12 @@ import math
 import yaml
 import random
 from copy import copy
+from itertools import chain
 
 CITIES = {}
 TABU_LIST = []
+TABU_FITNESS = []
+TABU_TENURE = []
 
 
 def _generate_solution():
@@ -32,12 +35,44 @@ def _solve_TSP(solution):
         neighbours = _get_neighbours(curr_bestNeighbour)
         bestFitness, bestNeighbour = _get_best_neighbour(neighbours, curr_fitness)
 
-    print(bestFitness, bestNeighbour)  # nasiel som lokalny extrem, teraz musím sa z neho dostať
+     # nasiel som lokalny extrem, teraz musím sa z neho dostať
 
+    print(bestFitness, bestNeighbour)
+    TABU_LIST.append(bestNeighbour)
+    TABU_FITNESS.append(bestFitness)
+    _tabu_search(bestNeighbour, bestFitness)
+
+
+def _tabu_search(current_bestNeighbour, current_bestFitness): # zaciatok tabu search
+    neighbours = _get_neighbours(current_bestNeighbour)
+    print(len(neighbours))
+    tabu_neighbours = _remove_tabod_solutions(neighbours)
+    print(len(tabu_neighbours), len(neighbours))
+    bestFitness, bestNeighbour = _get_best_neighbour(tabu_neighbours, current_bestFitness)
+
+    while bestFitness == current_bestFitness:
+        tabu_neighbours = _remove_tabod_solutions(tabu_neighbours)
+        bestFitness, bestNeighbour = _get_best_neighbour(tabu_neighbours, current_bestFitness)
+    print(bestFitness, bestNeighbour)
+    pass
+
+
+def _remove_tabod_solutions(neighbours):
+    for i in range(len(TABU_LIST)):
+        fitness_tabo = TABU_FITNESS[i]
+        for f in range(len(neighbours)):
+            fitness_neighbour = _get_two_cities(neighbours[f])
+            # print(fitness_neighbour)
+            if fitness_tabo == fitness_neighbour:
+                print(fitness_neighbour)
+                print(neighbours[f])
+                neighbours.remove(neighbours[f])
+                break
+    return neighbours
 
 
 def _get_best_neighbour(neighbours, fitness):
-    best_fitness = fitness
+    best_fitness = 0
     best_neighbour = neighbours[0]
     for i in range(len(neighbours)):
         current_fitness = _get_two_cities(neighbours[i])
@@ -47,11 +82,12 @@ def _get_best_neighbour(neighbours, fitness):
     return best_fitness, best_neighbour
 
 
-def _get_neighbours(solution):  # source: https://towardsdatascience.com/how-to-implement-the-hill-climbing-algorithm-in-python-1c65c29469de
+# source: https://towardsdatascience.com/how-to-implement-the-hill-climbing-algorithm-in-python-1c65c29469de
+def _get_neighbours(solution):
     neighbours = []
     starting_city = solution[0]
     solution.remove(starting_city)
-    solution.pop()
+    solution.remove(starting_city)
     for i in range(len(solution)):
         for j in range(i + 1, len(solution)):
             neighbour = solution.copy()
@@ -60,6 +96,8 @@ def _get_neighbours(solution):  # source: https://towardsdatascience.com/how-to-
             neighbour.insert(0, starting_city)
             neighbour.append(copy(starting_city))
             neighbours.append(neighbour)
+    solution.insert(0, starting_city)
+    solution.append(copy(starting_city))
     return neighbours
 
 
