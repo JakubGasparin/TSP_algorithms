@@ -6,10 +6,13 @@ from copy import copy
 from itertools import chain
 
 CITIES = {}
+
 TABU_LIST = []
 TABU_FITNESS = []
-TABU_TENURE = []
+TABU_TENURE = 10
 
+BEST_SOLUTION = []
+BEST_FITNESS = 0
 
 def _generate_solution():
     max_key = _get_max_key()
@@ -40,20 +43,56 @@ def _solve_TSP(solution):
     print(bestFitness, bestNeighbour)
     TABU_LIST.append(bestNeighbour)
     TABU_FITNESS.append(bestFitness)
+    BEST_SOLUTION.append(bestNeighbour)
     _tabu_search(bestNeighbour, bestFitness)
 
+# zaciatok tabu search. postupnosť:
+#
+# 1. nájdem si všetkých susedov pre moje momentálne najlepšie riešenie
+# 2. odstránim všetky tabu riešenia
+# 3. zistím fitness
+# 4. pokiaľ je fitness lepšia, tak sme našli nové najlepiš riešenie.
+#    to si uložím a následne hodím do tabu listu. pokiaľ je horšie, hodím ho hneď do tabu listu
+# 5. toto nové riešenie si zapamätám.
+# 6. opakujem od kroku jedna do vtedy, dokiaľ mi neskončí program (nesplní se podmienka)
 
-def _tabu_search(current_bestNeighbour, current_bestFitness): # zaciatok tabu search
-    neighbours = _get_neighbours(current_bestNeighbour)
-    print(len(neighbours))
-    tabu_neighbours = _remove_tabod_solutions(neighbours)
-    print(len(tabu_neighbours), len(neighbours))
-    bestFitness, bestNeighbour = _get_best_neighbour(tabu_neighbours, current_bestFitness)
 
-    while bestFitness == current_bestFitness:
-        tabu_neighbours = _remove_tabod_solutions(tabu_neighbours)
+def _tabu_search(current_bestNeighbour, current_bestFitness):
+    global BEST_FITNESS
+
+    for i in range(50):
+        current_neighbours = _get_neighbours(current_bestNeighbour)   # nájdem všetkých susedov pre momentálne najlepšie riešenie
+        tabu_neighbours = _remove_tabod_solutions(current_neighbours) # odstránim tabu riešenia
+
+        temp_fitness = current_bestFitness                            # nájdem najlšpie reišenie a jeho fitness
+        current_bestFitness = 0
         bestFitness, bestNeighbour = _get_best_neighbour(tabu_neighbours, current_bestFitness)
-    print(bestFitness, bestNeighbour)
+
+        TABU_LIST.append(bestNeighbour)                               # hodím ho do tabu listu
+        TABU_FITNESS.append(bestFitness)
+
+        if bestFitness > BEST_FITNESS:                                # skontrolujem či je to nové najlepšie riešenie
+            BEST_FITNESS = bestFitness
+            BEST_SOLUTION.clear()
+            BEST_SOLUTION.append(copy(bestNeighbour))
+
+        print(bestFitness, bestNeighbour)
+        print(BEST_SOLUTION)
+                                                 # odstránim navyše TABU záznamy
+        TABU_LIST.append(copy(bestNeighbour))
+        TABU_FITNESS.append(copy(bestFitness))
+        if len(TABU_LIST) > TABU_TENURE:
+            TABU_LIST.pop(0)
+            TABU_FITNESS.pop(0)
+
+        current_bestNeighbour = bestNeighbour                          # zapamätám si nové riešenie
+    print(BEST_SOLUTION)
+    print(TABU_LIST)
+    best_solution = BEST_SOLUTION[0]
+    print(best_solution)
+    best_fitness = _get_two_cities(best_solution)
+    print(best_fitness)
+
     pass
 
 
@@ -62,17 +101,14 @@ def _remove_tabod_solutions(neighbours):
         fitness_tabo = TABU_FITNESS[i]
         for f in range(len(neighbours)):
             fitness_neighbour = _get_two_cities(neighbours[f])
-            # print(fitness_neighbour)
             if fitness_tabo == fitness_neighbour:
-                print(fitness_neighbour)
-                print(neighbours[f])
                 neighbours.remove(neighbours[f])
                 break
     return neighbours
 
 
 def _get_best_neighbour(neighbours, fitness):
-    best_fitness = 0
+    best_fitness = fitness
     best_neighbour = neighbours[0]
     for i in range(len(neighbours)):
         current_fitness = _get_two_cities(neighbours[i])
